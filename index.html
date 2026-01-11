@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Public Speaking Practice Platform</title>
+<style>
+body { font-family: Arial, sans-serif; text-align: center; background: #f0f4f7; margin: 0; padding: 0; }
+header { background: #4a90e2; color: white; padding: 20px; }
+button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+.container { margin: 20px auto; max-width: 600px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+input[type="checkbox"] { margin-right: 10px; }
+textarea { width: 100%; height: 80px; margin-top: 10px; }
+.timer { font-size: 48px; margin: 20px 0; }
+#currentPromptTimer { font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #333; }
+#progress { font-weight: bold; margin-bottom: 15px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Public Speaking Practice Platform</h1>
+  <p>Improve your speech step by step!</p>
+</header>
+
+<!-- HOME PAGE -->
+<div class="container" id="home">
+  <h2>Welcome!</h2>
+  <p>Practice public speaking with random prompts, timed sessions, and feedback.</p>
+  <label>Select difficulty:</label>
+  <select id="difficultySelect">
+    <option value="beginner">Beginner</option>
+    <option value="intermediate">Intermediate</option>
+    <option value="advanced">Advanced</option>
+  </select>
+  <br>
+  <button onclick="showSection('prompt')">Start Prompt</button>
+  <button onclick="showSection('feedback')">Feedback</button>
+  <div id="progress">Prompts completed: 0</div>
+</div>
+
+<!-- PROMPT PAGE -->
+<div class="container" id="prompt" style="display:none;">
+  <h2>Prompt Generator</h2>
+  <p id="promptText">Click "Next Prompt" to get your practice topic.</p>
+  <button onclick="goToTimer()">Next Prompt → Timer</button>
+  <br>
+  <button onclick="showSection('home')">Back Home</button>
+</div>
+
+<!-- TIMER PAGE -->
+<div class="container" id="timer" style="display:none;">
+  <h2>Timer</h2>
+  <div id="currentPromptTimer"></div>
+  <div class="timer" id="timerDisplay">02:00</div>
+  <button onclick="startTimer()">Start</button>
+  <button onclick="pauseTimer()">Pause</button>
+  <button onclick="resetTimer()">Reset</button>
+  <br>
+  <button onclick="showSection('feedback')">Next: Feedback</button>
+</div>
+
+<!-- FEEDBACK PAGE -->
+<div class="container" id="feedback" style="display:none;">
+  <h2>Self-Assessment Feedback</h2>
+  <label><input type="checkbox"> Volume</label><br>
+  <label><input type="checkbox"> Clarity</label><br>
+  <label><input type="checkbox"> Posture</label><br>
+  <label><input type="checkbox"> Eye Contact</label><br>
+  <label><input type="checkbox"> Confidence</label><br>
+  <textarea id="feedbackNotes" placeholder="Write any notes / reflections here..."></textarea><br>
+  <button onclick="submitFeedback()">Submit Feedback</button>
+  <br><br>
+  <button onclick="showSection('home')">Back Home</button>
+</div>
+
+<script>
+// ---- Page Navigation ----
+function showSection(section) {
+  const sections = ['home','prompt','timer','feedback'];
+  sections.forEach(s => document.getElementById(s).style.display = 'none');
+  document.getElementById(section).style.display = 'block';
+}
+
+// ---- Prompts by difficulty ----
+const prompts = {
+  beginner: [
+    "Talk about your favorite book.",
+    "Describe your ideal day.",
+    "Share a funny experience."
+  ],
+  intermediate: [
+    "Describe a time you overcame fear.",
+    "Explain a simple science concept to a 10-year-old.",
+    "Describe a person who influenced you."
+  ],
+  advanced: [
+    "Explain a problem in your school and how to fix it.",
+    "Share an inspiring quote and why it matters.",
+    "Talk about a historical figure you admire."
+  ]
+};
+
+let currentPrompt = "";
+let completedPrompts = localStorage.getItem("completedPrompts") || 0;
+document.getElementById('progress').innerText = `Prompts completed: ${completedPrompts}`;
+
+// ---- Go to Timer with selected prompt ----
+function goToTimer() {
+  const difficulty = document.getElementById('difficultySelect').value;
+  const difficultyPrompts = prompts[difficulty];
+  const randomIndex = Math.floor(Math.random() * difficultyPrompts.length);
+  currentPrompt = difficultyPrompts[randomIndex];
+
+  document.getElementById('promptText').innerText = currentPrompt;
+  document.getElementById('currentPromptTimer').innerText = currentPrompt;
+
+  showSection('timer');
+  resetTimer();
+}
+
+// ---- Timer ----
+let timerDuration = 120; // seconds
+let timer = timerDuration;
+let interval = null;
+
+function updateTimerDisplay() {
+  let minutes = Math.floor(timer / 60);
+  let seconds = timer % 60;
+  document.getElementById('timerDisplay').innerText = 
+    `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+}
+
+function startTimer() {
+  if(interval) return;
+  interval = setInterval(() => {
+    if(timer > 0) {
+      timer--;
+      updateTimerDisplay();
+    } else {
+      clearInterval(interval);
+      interval = null;
+      alert("Time's up!");
+      // increment completed prompts
+      completedPrompts++;
+      localStorage.setItem("completedPrompts", completedPrompts);
+      document.getElementById('progress').innerText = `Prompts completed: ${completedPrompts}`;
+    }
+  }, 1000);
+}
+
+function pauseTimer() {
+  clearInterval(interval);
+  interval = null;
+}
+
+function resetTimer() {
+  clearInterval(interval);
+  interval = null;
+  timer = timerDuration;
+  updateTimerDisplay();
+}
+
+// ---- Feedback Submission ----
+function submitFeedback() {
+  const checkboxes = document.querySelectorAll('#feedback input[type="checkbox"]');
+  const feedbackData = [];
+  checkboxes.forEach(cb => {
+    feedbackData.push({name: cb.parentNode.innerText, checked: cb.checked});
+  });
+  const notes = document.getElementById('feedbackNotes').value;
+
+  const storedFeedback = JSON.parse(localStorage.getItem("feedback")) || [];
+  storedFeedback.push({prompt: currentPrompt, data: feedbackData, notes: notes});
+  localStorage.setItem("feedback", JSON.stringify(storedFeedback));
+
+  alert("Feedback submitted! Keep practicing.");
+  // Reset feedback form
+  checkboxes.forEach(cb => cb.checked = false);
+  document.getElementById('feedbackNotes').value = "";
+}
+</script>
+
+</body>
+</html>
